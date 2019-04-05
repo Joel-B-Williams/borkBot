@@ -33,7 +33,7 @@ class WebhooksController < ApplicationController
       message_payload["text"] = "It Ambork"
       HTTParty.post('https://slack.com/api/chat.postMessage', body: message_payload)
     elsif title_contains?("Triggered") #red
-      message_payload["text"] = "Oh no it red!!"
+      message_payload["text"] = "<!here> Oh no it red!!"
       HTTParty.post('https://slack.com/api/chat.postMessage', body: message_payload)
     elsif title_contains?("Recovered") #resolved
       message_payload["text"] = "It all good now"
