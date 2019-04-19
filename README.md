@@ -1,7 +1,7 @@
 # README
 
-ngrok to 3000 (rails default)
 rails s
+ngrok http 3000 (rails default)
 (opt) set devhub webhook to ngrok instance
 set datadog webhook to ngrok instance
 
