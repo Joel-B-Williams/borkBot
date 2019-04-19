@@ -15,10 +15,7 @@ class WebhooksController < ApplicationController
     if title_contains?("Warn") #amber
       message_payload["text"] = "It Ambork"
       res = HTTParty.post(slack_post, body: message_payload)
-      # p "*" *50
-      # p res.body
     elsif title_contains?("Triggered") #red
-
       convos = get_from(vip_inbox, icom) 
       full_convos = get_full_convos(convos, icom)
       assign_times = get_assignment_times(full_convos, vip_inbox)
@@ -29,7 +26,20 @@ class WebhooksController < ApplicationController
       else
         message_payload["text"] = "false alarm"
         res = HTTParty.post(slack_post, body: message_payload)
-        #API to DD to resolve monitor
+        
+        # api_key=<YOUR_API_KEY>
+        # app_key=<YOUR_APP_KEY>
+        
+        
+        # curl -X POST -H "Content-type: application/json" \
+        # -d '{
+        # "resolve": [
+        #           {"<YOUR_MONITOR_ID>": "<YOUR_FIRST_GROUP>"},
+        #           {"<YOUR_MONITOR_ID>": "<YOUR_SECOND_GROUP>"}
+        #       ]
+        # }' \
+        #     "https://app.datadoghq.com/monitor/bulk_resolve?api_key=${api_key}&application_key=${app_key}"
+
       end
 
     elsif title_contains?("Recovered") #resolved
