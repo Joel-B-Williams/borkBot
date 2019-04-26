@@ -16,26 +16,34 @@ class WebhooksController < ApplicationController
     dd_api_key = Rails.application.secrets.dd_api_key
     dd_app_key = Rails.application.secrets.dd_app_key
     datadog_resolve = "https://app.datadoghq.com/monitor/bulk_resolve?api_key=#{dd_api_key}&application_key=#{dd_app_key}"
-    # datadog_resolve = "https://app.datadoghq.com/monitor/bulk_resolve?api_key=21ea07c2d43462f80d54da7180ce53f4&application_key=43f5ed7cc0cb7d2bc360e684e8d5a994234d0296"
+    headers = {'Content-Type' => 'application/json', 'Accept' => 'application/json'}
     cse_monitor = {"resolve": [{"8755429": "*"}]}
-    user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
 
     if title_contains?("Warn") #amber
       message_payload["text"] = "It Ambork"
       res = HTTParty.post(slack_post, body: message_payload)
+      
     elsif title_contains?("Triggered") #red
+
       convos = get_from(vip_inbox, icom) 
       full_convos = get_full_convos(convos, icom)
       assign_times = get_assignment_times(full_convos, vip_inbox)
       red_convos = get_reds(assign_times, kpi_limit).length
-      
-      if red_convos > 0
+
+      if red_convos > 0 
         message_payload["text"] = "<!here> Oh no it red!! #{red_convos} over KPI"
         res = HTTParty.post(slack_post, body: message_payload) 
+        resolve = HTTParty.post(datadog_resolve, :body => cse_monitor.to_json, :headers => headers)
+        
+      # elsif prev_state == current_state >> TODO: move to Class to hold state
+      #   message_payload["text"] = "<!here> It same!! #{red_convos} over KPI"
+      #   res = HTTParty.post(slack_post, body: message_payload) 
+      #   resolve = HTTParty.post(datadog_resolve, :body => cse_monitor.to_json, :headers => headers)
+        
       else
         message_payload["text"] = "false alarm - Red count is #{red_convos}"
         res = HTTParty.post(slack_post, body: message_payload)
-        resolve = HTTParty.post(datadog_resolve, :body => cse_monitor.to_json, :headers => { 'Content-Type' => 'application/json', 'Accept' => 'application/json'})
+        resolve = HTTParty.post(datadog_resolve, :body => cse_monitor.to_json, :headers => headers)
       end
 
     elsif title_contains?("Recovered") #resolved
