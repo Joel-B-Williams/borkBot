@@ -6,12 +6,16 @@ class WebhooksController < ApplicationController
       "channel": "#cse-kpi-alerts"
     }
     
-    icom = Intercom::Client.new(token: Rails.application.secrets.icom_token)
+    # icom = Intercom::Client.new(token: Rails.application.secrets.icom_token)
+    icom = Intercom::Client.new(token: Rails.application.secrets.sb_token)
     title = params["title"]
 
     slack_post = 'https://slack.com/api/chat.postMessage'
-    vip_inbox = 2001586
-    kpi_limit = 1.minutes.ago.to_i
+    
+    vip_inbox = 2001586 #for sb_token testing
+    cse_inbox = 534597 #for CSE in prod
+    
+    kpi_limit = 120.minutes.ago.to_i
 
     dd_api_key = Rails.application.secrets.dd_api_key
     dd_app_key = Rails.application.secrets.dd_app_key
@@ -28,7 +32,7 @@ class WebhooksController < ApplicationController
       convos = get_from(vip_inbox, icom) 
       full_convos = get_full_convos(convos, icom)
       assign_times = get_assignment_times(full_convos, vip_inbox)
-      red_convos = get_reds(assign_times, kpi_limit).length
+      red_convos = get_reds(assign_times, kpi_limit).length 
 
       if red_convos > 0 
         message_payload["text"] = "<!here> Oh no it red!! #{red_convos} over KPI"
@@ -41,7 +45,7 @@ class WebhooksController < ApplicationController
       #   resolve = HTTParty.post(datadog_resolve, :body => cse_monitor.to_json, :headers => headers)
         
       else
-        message_payload["text"] = "false alarm - Red count is #{red_convos}"
+        message_payload["text"] = "We good - Red count is #{red_convos}"
         res = HTTParty.post(slack_post, body: message_payload)
         resolve = HTTParty.post(datadog_resolve, :body => cse_monitor.to_json, :headers => headers)
       end
