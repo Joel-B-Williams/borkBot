@@ -6,47 +6,65 @@ class WebhooksController < ApplicationController
       "channel": "#cse-kpi-alerts"
     }
     
-    icom = Intercom::Client.new(token: Rails.application.secrets.icom_token)
+    # icom = Intercom::Client.new(token: Rails.application.secrets.icom_token)
+    icom = Intercom::Client.new(token: Rails.application.secrets.sb_token)
     title = params["title"]
+
     slack_post = 'https://slack.com/api/chat.postMessage'
-    vip_inbox = 2001586
-    kpi_limit = 120.minutes.ago.to_i
     
+    vip_inbox = 2001586 #for sb_token testing
+    cse_inbox = 534597 #for CSE in prod
+    
+    kpi_limit = 120.minutes.ago.to_i
+
+    dd_api_key = Rails.application.secrets.dd_api_key
+    dd_app_key = Rails.application.secrets.dd_app_key
+    datadog_resolve = "https://app.datadoghq.com/monitor/bulk_resolve?api_key=#{dd_api_key}&application_key=#{dd_app_key}"
+    headers = {'Content-Type' => 'application/json', 'Accept' => 'application/json'}
+    cse_monitor = {"resolve": [{"8755429": "*"}]}
+
     if title_contains?("Warn") #amber
       message_payload["text"] = "It Ambork"
       res = HTTParty.post(slack_post, body: message_payload)
-      # p "*" *50
-      # p res.body
+      
     elsif title_contains?("Triggered") #red
 
       convos = get_from(vip_inbox, icom) 
       full_convos = get_full_convos(convos, icom)
       assign_times = get_assignment_times(full_convos, vip_inbox)
-      
-      if get_reds(assign_times, kpi_limit).length > 0
-        message_payload["text"] = "<!here> Oh no it red!!"
+      red_convos = get_reds(assign_times, kpi_limit).length 
+
+      if red_convos > 0 
+        message_payload["text"] = "<!here> Oh no it red!! #{red_convos} over KPI"
         res = HTTParty.post(slack_post, body: message_payload) 
+        resolve = HTTParty.post(datadog_resolve, :body => cse_monitor.to_json, :headers => headers)
+        
+      # elsif prev_state == current_state >> TODO: move to Class to hold state
+      #   message_payload["text"] = "<!here> It same!! #{red_convos} over KPI"
+      #   res = HTTParty.post(slack_post, body: message_payload) 
+      #   resolve = HTTParty.post(datadog_resolve, :body => cse_monitor.to_json, :headers => headers)
+        
       else
-        message_payload["text"] = "false alarm"
+        message_payload["text"] = "We good - Red count is #{red_convos}"
         res = HTTParty.post(slack_post, body: message_payload)
-        #API to DD to resolve monitor
+        resolve = HTTParty.post(datadog_resolve, :body => cse_monitor.to_json, :headers => headers)
       end
 
     elsif title_contains?("Recovered") #resolved
       
-      convos = get_from(vip_inbox, icom) 
-      full_convos = get_full_convos(convos, icom)
-      assign_times = get_assignment_times(full_convos, vip_inbox)
+      # convos = get_from(vip_inbox, icom) 
+      # full_convos = get_full_convos(convos, icom)
+      # assign_times = get_assignment_times(full_convos, vip_inbox)
 
       
-      if get_reds(assign_times, kpi_limit).length > 0
-        message_payload["text"] = "It all good now"
-        res = HTTParty.post(slack_post, body: message_payload) 
-      else
-        message_payload["text"] = "false alarm"
-        res = HTTParty.post(slack_post, body: message_payload)
-        #API to DD to resolve monitor
-      end
+      # if get_reds(assign_times, kpi_limit).length > 0
+      #   message_payload["text"] = "It all good now"
+      #   res = HTTParty.post(slack_post, body: message_payload) 
+      # else
+      #   message_payload["text"] = "false alarm"
+      #   res = HTTParty.post(slack_post, body: message_payload)
+      #   #API to DD to resolve monitor
+      # end
     end
   end
   
