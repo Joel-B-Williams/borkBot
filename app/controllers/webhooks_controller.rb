@@ -1,18 +1,15 @@
 class WebhooksController < ApplicationController
+  include FrtCheck
 
   def hook
-    include Frt_check
-
-    # icom = Intercom::Client.new(token: Rails.application.secrets.icom_token)
-    icom = Intercom::Client.new(token: Rails.application.secrets.sb_token)
+    icom = Intercom::Client.new(token: Rails.application.secrets.icom_token)
+    # icom = Intercom::Client.new(token: Rails.application.secrets.sb_token)
     
     vip_inbox = 2001586 #for sb_token testing
     cse_inbox = 534597 #for CSE in prod
     
-    kpi_limit = 120.minutes.ago.to_i
+    red_kpi = 120.minutes.ago.to_i
     
-    # title = params["title"]
-
     slack_post = 'https://slack.com/api/chat.postMessage'
     message_payload = {
       "token": "#{Rails.application.secrets.borkBot_oauth}",
@@ -31,15 +28,15 @@ class WebhooksController < ApplicationController
       res = HTTParty.post(slack_post, body: message_payload)
       
     elsif title_contains?("Triggered") #red
-      red_convos = red_count(vip_inbox, kpi_limit, icom)
+      reds = over_limit_count(cse_inbox, red_kpi, icom)
 
-      if red_convos > 0 
-        message_payload["text"] = "<!here> Oh no it red!! #{red_convos} over KPI"
+      if reds > 0 
+        message_payload["text"] = " Oh no it red!! #{reds} over KPI"
         
         HTTParty.post(slack_post, body: message_payload) 
         HTTParty.post(datadog_resolve, :body => cse_monitor.to_json, :headers => headers)
       else
-        message_payload["text"] = "We good - Red count is #{red_convos}"
+        message_payload["text"] = "We good - Red count is #{reds}"
         
         HTTParty.post(slack_post, body: message_payload)
         HTTParty.post(datadog_resolve, :body => cse_monitor.to_json, :headers => headers)

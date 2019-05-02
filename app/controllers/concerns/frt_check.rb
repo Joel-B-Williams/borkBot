@@ -1,4 +1,4 @@
-module Frt_check
+module FrtCheck
 
   def get_from(inbox, icom)
     icom.conversations.find_all(open: true, type: "admin", id: inbox)
@@ -14,15 +14,15 @@ module Frt_check
     end
   end
 
-  def get_reds(assignment_parts, kpi_limit)
+  def over_limit(assignment_parts, kpi_limit)
     assignment_parts.select {|assign| assign.created_at.to_i < kpi_limit}
   end
 
-  def red_count(inbox, kpi_limit, icom)
-    convos = get_from(vip_inbox, icom) 
+  def over_limit_count(inbox, kpi_limit, icom)
+    convos = get_from(inbox, icom) 
     full_convos = get_full_convos(convos, icom)
-    assign_times = get_assignment_times(full_convos, vip_inbox)
-    red_convos_count = get_reds(assign_times, kpi_limit).length
+    assign_times = get_assignment_times(full_convos, inbox)
+    over_limit = over_limit(assign_times, kpi_limit).length
   end
 
 end
